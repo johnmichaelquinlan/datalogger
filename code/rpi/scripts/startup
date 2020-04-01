@@ -1,0 +1,13 @@
+#!/bin/bash
+
+cd /home/pi/
+
+LOGFILE=/home/pi/logs/startup.txt
+
+writelog() {
+  now=`date`
+  echo "$now $*" >> $LOGFILE
+}
+
+sudo python /home/pi/scripts/datalog.py >> $LOGFILE
+

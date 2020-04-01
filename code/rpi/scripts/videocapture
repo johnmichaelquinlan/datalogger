@@ -1,0 +1,9 @@
+#!/bin/bash
+
+timestamp=$1
+filepath=/home/pi/datalog/videos/
+extension=_video.mp4
+fullpath=$filepath$timestamp$extension
+ 
+raspivid -w 640 -h 480 -t 0 -o -| ffmpeg -r 30 -i - -vcodec copy $fullpath
+
