@@ -1,4 +1,4 @@
-QT += core gui widgets charts multimedia multimediawidgets
+QT += core gui widgets charts multimedia multimediawidgets webenginewidgets websockets
 
 CONFIG += c++11
 
@@ -9,5 +9,4 @@ SOURCES += \
     mainwindow.cpp
 
 HEADERS += \
-    SensorTypes.h \
     mainwindow.h

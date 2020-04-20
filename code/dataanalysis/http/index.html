@@ -1,0 +1,154 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>GPSTracker</title>
+<style type="text/css">
+
+body, body {
+	background-color:gray;
+	text-align: center;
+	margin: 0;
+	padding: 0;
+}
+
+h2 {
+    background-color: grey;
+	text-align: center;
+}
+
+p {
+    background-color: grey;
+	text-align: center;
+}
+
+div {
+	text-align: center;
+}
+
+table {
+	border: none;
+	margin: 0;
+	padding: 0;
+}
+
+th, td {
+	border: 1px solid black;
+	margin: 0;
+	padding: 0;
+}
+
+#state {
+    -webkit-box-sizing: border-box;
+    -moz-box-sizing: border-box;
+    box-sizing: border-box;
+	width:100%;
+	height:25;
+}
+
+#clock {
+	font-family: Lucida Console;	
+}
+
+#output {
+    -webkit-box-sizing: border-box;
+    -moz-box-sizing: border-box;
+    box-sizing: border-box;
+	width:100%;
+	height:100%;
+}
+
+#center-table {
+    -webkit-box-sizing: border-box;
+    -moz-box-sizing: border-box;
+    box-sizing: border-box;
+	width:100%;
+	height:100%;
+}
+
+
+</style>
+<script type="text/javascript" src="https://www.google.com/jsapi"></script>
+<script type="text/javascript" src="http://code.jquery.com/jquery-1.6.4.min.js"></script>
+<script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/2.1.0/jquery.min.js"></script>
+<script type="text/javascript" src="https://maps.googleapis.com/maps/api/js?v=3&amp;key=AIzaSyDFD-RYojI0UsPWGgeS4gO8h8JJuqzt2rs"></script>
+<script language="javascript" type="text/javascript">
+	var wsUri = "ws://127.0.0.1:4242"; 
+	var websocket;
+	var marker;
+	var map;
+	var dataJson;
+
+	
+	google.maps.event.addDomListener(window, 'load', InitMap);
+	window.addEventListener("load", Init, false);
+	google.load("visualization", "1", {packages:["map"]});
+		
+	function Init() 
+	{ 
+		InitWebSocket(); 
+	}
+	
+	function InitWebSocket() 
+	{ 
+		websocket = new WebSocket(wsUri); 
+		websocket.binaryType = 'arraybuffer';
+		websocket.onmessage = function(evt) 
+		{ 
+			onMessage(evt) 
+		};
+	}
+	
+	function InitMap()
+	{
+		var bikepos = new google.maps.LatLng(0.0, 0.0);
+		var mapdata = {
+			center: bikepos,
+			zoom: 16
+        };
+		
+        map = new google.maps.Map(document.getElementById('map_markers_div'),mapdata);
+		
+		marker = new google.maps.Marker({
+			position: bikepos,
+			map: map,
+			title:"Bike"
+		});
+	}
+	
+	function UpdateData()
+	{
+	
+		var latitude = dataJson.lat;
+		var longitude = dataJson.lon;
+		var bikepos = new google.maps.LatLng(latitude, longitude);
+		marker.setPosition(bikepos);
+		map.panTo(bikepos);
+	}
+	
+	function onMessage(evt) 
+	{ 
+		dataJson = JSON.parse( evt.data );
+		UpdateData();
+	}
+	function writeToScreen(message) 
+	{ 
+		//var pre = document.createElement("p"); 
+		//pre.style.wordWrap = "break-word"; 
+		//pre.innerHTML = message; 
+		//output.appendChild(pre); 
+	}
+</script>
+</head>
+<body>
+<table width="100%" height="100%">
+	<tr>
+		<td>
+			<div id="map_markers_div" style="width: 100%; height: 100%"></div>
+		</td>
+	</tr>
+	<!--<tr>
+		<td colspan="3"><div id="output"><div/></td>
+	</tr>-->
+</table>
+</body>
+</html>

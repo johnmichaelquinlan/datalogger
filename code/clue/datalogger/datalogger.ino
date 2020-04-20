@@ -4,15 +4,21 @@
 #include <Adafruit_LIS3MDL.h> // magnetos
 #include <Adafruit_SHT31.h> // humidity
 #include <Adafruit_BMP280.h> // temp baro
-#include <TinyGPS.h>
 #include <SoftwareSerial.h>
+#include <TinyGPS.h>
 
-SoftwareSerial gpsSerial(A0, A1); // RX, TX
+SoftwareSerial gpsSerial(A6, A5); // RX, TX
 
-#define LAP_INPUT_PIN 6
-unsigned long SAMPLE_DELAY = 20; //milliseconds
-uint8_t START_SENSOR_DATA = 0x40;
-int32_t SENSOR_TYPE_BUTTON = 20;
+#define LAP_INPUT_PIN 12
+#define START_INPUT_PIN 10
+#define STOP_INPUT_PIN 11
+
+const unsigned long SAMPLE_DELAY = 20; //milliseconds
+const uint8_t START_SENSOR_DATA = 0x40;
+const int32_t SENSOR_TYPE_BUTTON = 20;
+
+bool sentenceReady = false;
+uint8_t lap = 0;
   
 Adafruit_Arcada arcada;
 Adafruit_LSM6DS33 lsm6ds33; // accel gyro temp
@@ -104,6 +110,8 @@ void setup() {
   arcada.display->setTextWrap(true);
 
   pinMode( LAP_INPUT_PIN, INPUT_PULLUP ); 
+  pinMode( START_INPUT_PIN, INPUT_PULLUP ); 
+  pinMode( STOP_INPUT_PIN, INPUT_PULLUP ); 
   
   if ( okay ) {
     arcada.display->setTextColor(ARCADA_GREEN);
@@ -120,8 +128,7 @@ void WriteHeader() {
 
 void WriteLap() {
   int32_t timestamp = millis();
-  uint8_t lap = 0;
-  
+    
   Serial1.write((uint8_t*)&START_SENSOR_DATA, 1);
   Serial1.write((uint8_t*)&SENSOR_TYPE_BUTTON, 4);
   Serial1.write((uint8_t*)&timestamp, 4);
@@ -132,7 +139,7 @@ void WriteLap() {
   } else if ( digitalRead( LAP_INPUT_PIN ) != LOW && prevLap == true ) {
     prevLap = false;   
     
-    lap = 1;
+    lap++;
     Serial1.write((uint8_t*)&lap, 1);
     
     int32_t lapDelta = timestamp - lapStartTimeStamp;
@@ -142,7 +149,7 @@ void WriteLap() {
     
     char laptext[16];
     memset(laptext,'\0', sizeof(laptext));
-    snprintf(laptext, sizeof(laptext)-1, "Lap: %02d.%02d.%03d\n", numMinutes, numSeconds, numMillis);
+    snprintf(laptext, sizeof(laptext)-1, "Lap %d: %02d.%02d.%03d\n", lap, numMinutes, numSeconds, numMillis);
     arcada.display->setTextColor(ARCADA_GREEN);
     arcada.display->print( laptext );
     arcada.display->println(" ");
@@ -203,38 +210,39 @@ void WriteHumid(const sensors_event_t & humid) {
   Serial1.write('\n');
 }
 
-void WriteGPS( sensors_event_t & gps ) {
-  Serial1.write((uint8_t*)&START_SENSOR_DATA, 1);
-  Serial1.write((uint8_t*)&gps.type, 4);
-  Serial1.write((uint8_t*)&gps.timestamp, 4);
-  Serial1.write((uint8_t*)&gps.gps.ll, 8);
-  Serial1.write((uint8_t*)&gps.gps.age, 4);
-  Serial1.write((uint8_t*)&gps.gps.status, 1);
-  Serial1.write('\n');
+void parseGPS() {
+  while ( gpsSerial.available() ) {
+    if ( sgps.encode( gpsSerial.read() ) ) {
+      sentenceReady = true;
+      break;
+    }
+  }
+}
+
+void WriteGPS() {
+  if ( sentenceReady ) {
+    sensors_gps_t gps;
+    sgps.f_get_position(&gps.latitude, &gps.longitude, &gps.age);
+    gps.status = gps.latitude != TinyGPS::GPS_INVALID_F_ANGLE && gps.longitude != TinyGPS::GPS_INVALID_F_ANGLE && gps.age != TinyGPS::GPS_INVALID_AGE;
+    
+    int32_t timeStamp = millis();
+    int32_t gpstype = SENSOR_TYPE_GPS;
+    Serial1.write((uint8_t*)&START_SENSOR_DATA, 1);
+    Serial1.write((uint8_t*)&gpstype, 4);
+    Serial1.write((uint8_t*)&timeStamp, 4);
+    Serial1.write((uint8_t*)&gps.latitude, 4);
+    Serial1.write((uint8_t*)&gps.longitude, 4);
+    Serial1.write((uint8_t*)&gps.age, 4);
+    Serial1.write((uint8_t*)&gps.status, 1);
+    Serial1.write('\n');
+    sentenceReady = false;
+  }
 }
 
 void getHumidityEvent( sensors_event_t & humidity ) {
   humidity.type = SENSOR_TYPE_RELATIVE_HUMIDITY;
   humidity.timestamp = millis();
   humidity.relative_humidity = sht30.readHumidity();
-}
-
-void getGPSEvent( sensors_event_t & gps ) {
-  gps.type = SENSOR_TYPE_GPS;
-  gps.timestamp = millis();
-  if ( gpsSerial.available() ) {
-    if ( debug ) {
-      Serial.write(gpsSerial.read());
-    } else {
-      sgps.encode(gpsSerial.read());
-    }
-  }
-  parseGPS(gps.gps);
-}
-
-void parseGPS(sensors_gps_t & gps) {
-  sgps.f_get_position(&gps.latitude, &gps.longitude, &gps.age);
-  gps.status = gps.latitude != TinyGPS::GPS_INVALID_F_ANGLE && gps.longitude != TinyGPS::GPS_INVALID_F_ANGLE && gps.age != TinyGPS::GPS_INVALID_AGE;
 }
 
 void loop() {
@@ -248,6 +256,7 @@ void loop() {
       String temp = Serial1.readString();
       if ( temp.startsWith("ready") ) {
         connected = true;
+        tone(ARCADA_AUDIO_OUT, 6000, 200);
         arcada.display->setTextColor(ARCADA_BLUE);
         arcada.display->println("Connected!");
       }
@@ -256,16 +265,17 @@ void loop() {
   }
 
   uint8_t pressed_buttons = arcada.readButtons();
-  if (pressed_buttons & ARCADA_BUTTONMASK_A && sampling == false ) {
+  if (digitalRead( START_INPUT_PIN ) == LOW && sampling == false ) {
       tone(ARCADA_AUDIO_OUT, 4000, 100);
       arcada.display->println("Starting Capture");
       arcada.display->setTextColor(ARCADA_YELLOW);
       arcada.display->println("Sampling...");
       sampling = true;
+      lap = 0;
       lapStartTimeStamp = prevMillis = millis();
   }
   
-  if (pressed_buttons & ARCADA_BUTTONMASK_B && sampling == true ) {
+  if ( digitalRead( STOP_INPUT_PIN ) == LOW && sampling == true ) {
       sampling = false;
       tone(ARCADA_AUDIO_OUT, 5000, 100);
       arcada.display->setTextColor(ARCADA_BLUE);
@@ -278,13 +288,13 @@ void loop() {
   unsigned long currentSampleTime = millis();
   if ( sampling == true && currentSampleTime > nextSampleTime ) {
     prevMillis = currentSampleTime;
-    sensors_event_t accel, gyro, mag, temp, pres, humid, gps;
+    sensors_event_t accel, gyro, mag, temp, pres, humid;
     lsm6ds33.getEvent(&accel, &gyro, 0);
     lis3mdl.getEvent(&mag);
     bmp280.getTemperatureSensor()->getEvent(&temp);
     bmp280.getPressureSensor()->getEvent(&pres);
-    getHumidityEvent( humid );
-    getGPSEvent( gps );    
+    getHumidityEvent( humid ); 
+    parseGPS();
     
     WriteHeader();      
     WriteLap();
@@ -294,6 +304,6 @@ void loop() {
     WriteMag( mag );
     WriteBaro( pres );
     WriteHumid( humid );
-    WriteGPS( gps );
+    WriteGPS();
   } 
 }

@@ -18,18 +18,32 @@
 #include <QFileDialog>
 #include <QLineSeries>
 #include <QScatterSeries>
+#include <QWebEngineView>
+#include <QtWebSockets/QWebSocketServer>
+#include <QtWebSockets/QWebSocket>
+#include <QJsonObject>
+#include <QJsonDocument>
 
 using namespace QtCharts;
 
-#include "SensorTypes.h"
 
 MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent)
 {
     resize(1024, 768);
 
+    int port = 4242;
+
     QAction *action_Open = new QAction();
     action_Open->setText("&Open");
     connect(action_Open, SIGNAL(triggered()), this, SLOT(openFile()));
+
+    webSocketServer = new QWebSocketServer(QStringLiteral("Chat Server"), QWebSocketServer::NonSecureMode, this);
+    if (webSocketServer->listen(QHostAddress::LocalHost, port))
+    {
+        QTextStream(stdout) << "Chat Server listening on port " << port << '\n';
+        connect(webSocketServer, &QWebSocketServer::newConnection, this, &MainWindow::onNewConnection);
+    }
+
 
     QMenu *menu_File = menuBar()->addMenu("&File");
     {
@@ -68,10 +82,13 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent)
                         sideSplitter->addWidget(videoStream);
                     }
 
-                    QListView *dataPlotsList = new QListView();
+                    mapView = new QWebEngineView(this);
                     {
+                        QWebEnginePage *page = mapView->page();
+                        page->load(QUrl(QStringLiteral("file:///F:/Development/other/datalogger/code/dataanalysis/http/index.html")));
+
                         sideSizes.append(400);
-                        sideSplitter->addWidget(dataPlotsList);
+                        sideSplitter->addWidget(mapView);
                     }
 
                     sideSplitter->setSizes(sideSizes);
@@ -133,6 +150,23 @@ void MainWindow::sliderChanged(int value) {
 
     QString timeValue = QString("Current Time: %1:%2.%3").arg(numMinutes,2,10,QChar('0')).arg(numSeconds,2,10,QChar('0')).arg(numMillis,3,10,QChar('0'));
     statusBar()->showMessage(timeValue);
+
+    float percentage = (float)millis / (float)player->duration() * 100.0f;
+
+    if ( gpsSamples.length() > 0 ) {
+        const int sampleIndex = ( (float)gpsSamples.length() / 100.0f ) * percentage;
+
+        QJsonObject coord;
+
+        coord["lat"] = QString("%1").arg(gpsSamples[sampleIndex].lat);
+        coord["lon"] = QString("%1").arg(gpsSamples[sampleIndex].lon);
+
+        QJsonDocument saveDoc(coord);
+        //test
+        for (QWebSocket *pClient : qAsConst(clients)) {
+            pClient->sendTextMessage(saveDoc.toJson());
+        }
+    }
 }
 
 void MainWindow::videoDurationAdjusted(qint64 duration) {
@@ -156,15 +190,6 @@ void MainWindow::parseFile() {
     if ( dataFile.read(data,fileLength+1) != fileLength ) {
         return; // we didnt read all the data might have to chunk
     }
-
-    QVector<AccelerometerSample> accelerometerSamples;
-    QVector<MagneticFieldSample> magneticFieldSamples;
-    QVector<GyroscopeSample> gyroscopeSamples;
-    QVector<AtmosphericPressureSample> atmosphericPressureSamples;
-    QVector<RelativeHumiditySample> relativeHumiditySamples;
-    QVector<TemperatureSample> temperatureSamples;
-    QVector<GPSSample> gpsSamples;
-    QVector<ButtonPressedSample> buttonPressedSamples;
 
     for ( int idx = 0; idx <= fileLength; ++idx ) {
         if ( data[idx] != '@' ) {
@@ -252,11 +277,10 @@ void MainWindow::parseFile() {
             {
                 GPSSample sample;
                 sample.timestamp = timestamp;
-                sample.latitude = Sample_ReadFloat( data, idx );
-                sample.longitude = Sample_ReadFloat( data, idx );
+                sample.lat = Sample_ReadFloat( data, idx );
+                sample.lon = Sample_ReadFloat( data, idx );
                 sample.age = Sample_ReadInt( data, idx );
                 sample.status = Sample_ReadByte( data, idx );
-
                 if ( Sample_EndIsValid( data, idx ) ) {
                     gpsSamples.append(sample);
                 }
@@ -276,6 +300,9 @@ void MainWindow::parseFile() {
     }
 
 
+    marker = new QLineSeries();
+    marker->append(0,0);
+
     {
         QChartView * chartView = new QChartView();
         QChart * chart = new QChart();
@@ -291,6 +318,7 @@ void MainWindow::parseFile() {
             series->append(temperatureSamples[idx].timestamp,temperatureSamples[idx].temperature );
         }
         chart->addSeries(series);
+        chart->addSeries( marker );
         chart->createDefaultAxes();
     }
 
@@ -437,7 +465,7 @@ void MainWindow::parseFile() {
         chartView->setRenderHint(QPainter::Antialiasing);
         chartHolder->addTab(chartView, "Lap Marker");
 
-        QScatterSeries * series = new QScatterSeries();
+        QLineSeries * series = new QLineSeries();
         int numSamples = buttonPressedSamples.count();
         for ( int idx = 0; idx < numSamples; ++idx ){
             series->append(buttonPressedSamples[idx].timestamp, (int)(buttonPressedSamples[idx].value));
@@ -445,7 +473,64 @@ void MainWindow::parseFile() {
         chart->addSeries(series);
         chart->createDefaultAxes();
     }
+
+    {
+        if ( gpsSamples.length() > 0 ) {
+            QJsonObject coord;
+            coord["lat"] = QString("%1").arg(gpsSamples[0].lat);
+            coord["lon"] = QString("%1").arg(gpsSamples[0].lon);
+            QJsonDocument saveDoc(coord);
+            for (QWebSocket *pClient : qAsConst(clients)) {
+                pClient->sendTextMessage(saveDoc.toJson());
+            }
+        }
+    }
     update();
 }
 
+static QString getIdentifier(QWebSocket *peer)
+{
+    return QStringLiteral("%1:%2").arg(peer->peerAddress().toString(), QString::number(peer->peerPort()));
+}
 
+void MainWindow::onNewConnection()
+{
+    auto pSocket = webSocketServer->nextPendingConnection();
+    QTextStream(stdout) << getIdentifier(pSocket) << " connected!\n";
+    pSocket->setParent(this);
+
+    connect(pSocket, &QWebSocket::textMessageReceived, this, &MainWindow::processMessage);
+    connect(pSocket, &QWebSocket::disconnected, this, &MainWindow::socketDisconnected);
+
+    clients << pSocket;
+
+    if ( gpsSamples.length() > 0 ) {
+
+        QJsonObject coord;
+
+        coord["lat"] = QString("%1").arg(gpsSamples[0].lat);
+        coord["lon"] = QString("%1").arg(gpsSamples[0].lon);
+
+        QJsonDocument saveDoc(coord);
+        //test
+        for (QWebSocket *pClient : qAsConst(clients)) {
+            pClient->sendTextMessage(saveDoc.toJson());
+        }
+    }
+}
+
+void MainWindow::processMessage(const QString &message)
+{
+    //QWebSocket *pSender = qobject_cast<QWebSocket *>(sender());
+}
+
+void MainWindow::socketDisconnected()
+{
+    QWebSocket *pClient = qobject_cast<QWebSocket *>(sender());
+    QTextStream(stdout) << getIdentifier(pClient) << " disconnected!\n";
+    if (pClient)
+    {
+        clients.removeAll(pClient);
+        pClient->deleteLater();
+    }
+}

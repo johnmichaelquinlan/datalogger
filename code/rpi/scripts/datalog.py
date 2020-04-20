@@ -7,8 +7,8 @@ import serial
 from time import sleep
 from datetime import datetime
 
-captureButton = 17
-clueStartCapture = 22
+captureButton = 22
+clueStartCapture = 17
 clueStopCapture = 27
 
 GPIO.setmode(GPIO.BCM)
