@@ -1,2 +1,3 @@
 code/dataanalysis/*.user
 code/build*
+code/dataanalysis/*/*.pem
