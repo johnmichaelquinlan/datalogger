@@ -32,7 +32,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent)
     resize(1024, 768);
 
     int port = 4242;
-
+    zerosampletime = 0.0f;
     QAction *action_Open = new QAction();
     action_Open->setText("&Open");
     connect(action_Open, SIGNAL(triggered()), this, SLOT(openFile()));
@@ -61,10 +61,27 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent)
                 QList<int> sizes;
                 splitter->setOrientation(Qt::Horizontal);
 
+                QVBoxLayout * verticalChartLayout = new QVBoxLayout();
                 chartHolder = new QTabWidget();
+
+                timeLineSlider = new QSlider();
+                {
+                    timeLineSlider->setOrientation(Qt::Horizontal);
+                    timeLineSlider->setTickInterval(5);
+                    timeLineSlider->setSingleStep(1);
+                    timeLineSlider->setPageStep(5);
+                    timeLineSlider->setTickPosition(QSlider::TicksBothSides);
+                    connect(timeLineSlider, SIGNAL(sliderMoved(int)), this, SLOT(sliderChanged(int)));
+
+                }
+                verticalChartLayout->addWidget( chartHolder );
+                verticalChartLayout->addWidget(timeLineSlider);
+
                 {
                     sizes.append(800);
-                    splitter->addWidget(chartHolder);
+                    QWidget * holderWidget = new QWidget();
+                    holderWidget->setLayout( verticalChartLayout );
+                    splitter->addWidget(holderWidget);
                 }
 
                 QSplitter * sideSplitter = new QSplitter();
@@ -96,17 +113,6 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent)
                 }
                 splitter->setSizes(sizes);
                 verticalLayout->addWidget(splitter);
-            }
-
-            timeLineSlider = new QSlider();
-            {
-                timeLineSlider->setOrientation(Qt::Horizontal);
-                timeLineSlider->setTickInterval(5);
-                timeLineSlider->setSingleStep(1);
-                timeLineSlider->setPageStep(5);
-                timeLineSlider->setTickPosition(QSlider::TicksBothSides);
-                connect(timeLineSlider, SIGNAL(sliderMoved(int)), this, SLOT(sliderChanged(int)));
-                verticalLayout->addWidget(timeLineSlider);
             }
 
             centralwidget->setLayout(verticalLayout);
@@ -151,15 +157,16 @@ void MainWindow::sliderChanged(int value) {
     QString timeValue = QString("Current Time: %1:%2.%3").arg(numMinutes,2,10,QChar('0')).arg(numSeconds,2,10,QChar('0')).arg(numMillis,3,10,QChar('0'));
     statusBar()->showMessage(timeValue);
 
-    float percentage = (float)millis / (float)player->duration() * 100.0f;
+    float sampleTime = millis + zerosampletime;
 
-    if ( gpsSamples.length() > 0 ) {
-        const int sampleIndex = ( (float)gpsSamples.length() / 100.0f ) * percentage;
+    const int gpsIndex = FindGPSSampleIndex( sampleTime );
+
+    if ( gpsIndex > -1 ) {
 
         QJsonObject coord;
 
-        coord["lat"] = QString("%1").arg(gpsSamples[sampleIndex].lat);
-        coord["lon"] = QString("%1").arg(gpsSamples[sampleIndex].lon);
+        coord["lat"] = QString("%1").arg(gpsSamples[gpsIndex].lat);
+        coord["lon"] = QString("%1").arg(gpsSamples[gpsIndex].lon);
 
         QJsonDocument saveDoc(coord);
         //test
@@ -298,8 +305,48 @@ void MainWindow::parseFile() {
             }
         }
     }
+    calculateTimeline();
+}
 
+void MainWindow::calculateTimeline() {
+    const int accelCount = accelerometerSamples.length();
+    const int magCount = magneticFieldSamples.length();
+    const int gyroCount = gyroscopeSamples.length();
+    const int atmostCount = atmosphericPressureSamples.length();
+    const int humidCount = relativeHumiditySamples.length();
+    const int tempCount = temperatureSamples.length();
+    const int gpsCount = gpsSamples.length();
+    const int buttonCount = buttonPressedSamples.length();
 
+    zerosampletime = 999999999999.9f;
+    if ( accelCount > 0 ) {
+        zerosampletime = accelerometerSamples[0].timestamp < zerosampletime ? accelerometerSamples[0].timestamp : zerosampletime;
+    }
+    if ( magCount > 0 ) {
+        zerosampletime = magneticFieldSamples[0].timestamp < zerosampletime ? magneticFieldSamples[0].timestamp : zerosampletime;
+    }
+    if ( gyroCount > 0 ) {
+        zerosampletime = gyroscopeSamples[0].timestamp < zerosampletime ? gyroscopeSamples[0].timestamp : zerosampletime;
+    }
+    if ( atmostCount > 0 ) {
+        zerosampletime = atmosphericPressureSamples[0].timestamp < zerosampletime ? atmosphericPressureSamples[0].timestamp : zerosampletime;
+    }
+    if ( humidCount > 0 ) {
+        zerosampletime = relativeHumiditySamples[0].timestamp < zerosampletime ? relativeHumiditySamples[0].timestamp : zerosampletime;
+    }
+    if ( tempCount > 0 ) {
+        zerosampletime = temperatureSamples[0].timestamp < zerosampletime ? temperatureSamples[0].timestamp : zerosampletime;
+    }
+    if ( gpsCount > 0 ) {
+        zerosampletime = gpsSamples[0].timestamp < zerosampletime ? gpsSamples[0].timestamp : zerosampletime;
+    }
+    if ( buttonCount > 0 ) {
+        zerosampletime = buttonPressedSamples[0].timestamp < zerosampletime ? buttonPressedSamples[0].timestamp : zerosampletime;
+    }
+    createCharts();
+}
+
+void MainWindow::createCharts() {
     marker = new QLineSeries();
     marker->append(0,0);
 
@@ -315,11 +362,13 @@ void MainWindow::parseFile() {
         QLineSeries * series = new QLineSeries();
         int numSamples = temperatureSamples.count();
         for ( int idx = 0; idx < numSamples; ++idx ){
-            series->append(temperatureSamples[idx].timestamp,temperatureSamples[idx].temperature );
+            series->append(temperatureSamples[idx].timestamp-zerosampletime,temperatureSamples[idx].temperature );
         }
         chart->addSeries(series);
         chart->addSeries( marker );
         chart->createDefaultAxes();
+        QList<QAbstractAxis*> axis = chart->axes(Qt::Horizontal);
+        axis[0]->setMin(0);
     }
 
     {
@@ -334,24 +383,26 @@ void MainWindow::parseFile() {
         QLineSeries * series = new QLineSeries();
         int numSamples = accelerometerSamples.count();
         for ( int idx = 0; idx < numSamples; ++idx ){
-            series->append(accelerometerSamples[idx].timestamp,accelerometerSamples[idx].acceleration[0] );
+            series->append(accelerometerSamples[idx].timestamp-zerosampletime,accelerometerSamples[idx].acceleration[0] );
         }
         chart->addSeries(series);
 
         series = new QLineSeries();
         numSamples = accelerometerSamples.count();
         for ( int idx = 0; idx < numSamples; ++idx ){
-            series->append(accelerometerSamples[idx].timestamp,accelerometerSamples[idx].acceleration[1]);
+            series->append(accelerometerSamples[idx].timestamp-zerosampletime,accelerometerSamples[idx].acceleration[1]);
         }
         chart->addSeries(series);
 
         series = new QLineSeries();
         numSamples = accelerometerSamples.count();
         for ( int idx = 0; idx < numSamples; ++idx ){
-            series->append(accelerometerSamples[idx].timestamp,accelerometerSamples[idx].acceleration[2]);
+            series->append(accelerometerSamples[idx].timestamp-zerosampletime,accelerometerSamples[idx].acceleration[2]);
         }
         chart->addSeries(series);
         chart->createDefaultAxes();
+        QList<QAbstractAxis*> axis = chart->axes(Qt::Horizontal);
+        axis[0]->setMin(0);
     }
 
 
@@ -367,24 +418,26 @@ void MainWindow::parseFile() {
         QLineSeries * series = new QLineSeries();
         int numSamples = gyroscopeSamples.count();
         for ( int idx = 0; idx < numSamples; ++idx ){
-            series->append(gyroscopeSamples[idx].timestamp,gyroscopeSamples[idx].gyro[0] );
+            series->append(gyroscopeSamples[idx].timestamp-zerosampletime,gyroscopeSamples[idx].gyro[0] );
         }
         chart->addSeries(series);
 
         series = new QLineSeries();
         numSamples = gyroscopeSamples.count();
         for ( int idx = 0; idx < numSamples; ++idx ){
-            series->append(gyroscopeSamples[idx].timestamp,gyroscopeSamples[idx].gyro[1]);
+            series->append(gyroscopeSamples[idx].timestamp-zerosampletime,gyroscopeSamples[idx].gyro[1]);
         }
         chart->addSeries(series);
 
         series = new QLineSeries();
         numSamples = gyroscopeSamples.count();
         for ( int idx = 0; idx < numSamples; ++idx ){
-            series->append(gyroscopeSamples[idx].timestamp,gyroscopeSamples[idx].gyro[2]);
+            series->append(gyroscopeSamples[idx].timestamp-zerosampletime,gyroscopeSamples[idx].gyro[2]);
         }
         chart->addSeries(series);
         chart->createDefaultAxes();
+        QList<QAbstractAxis*> axis = chart->axes(Qt::Horizontal);
+        axis[0]->setMin(0);
     }
 
 
@@ -400,24 +453,26 @@ void MainWindow::parseFile() {
         QLineSeries * series = new QLineSeries();
         int numSamples = magneticFieldSamples.count();
         for ( int idx = 0; idx < numSamples; ++idx ){
-            series->append(magneticFieldSamples[idx].timestamp,magneticFieldSamples[idx].magnetic[0] );
+            series->append(magneticFieldSamples[idx].timestamp-zerosampletime,magneticFieldSamples[idx].magnetic[0] );
         }
         chart->addSeries(series);
 
         series = new QLineSeries();
         numSamples = magneticFieldSamples.count();
         for ( int idx = 0; idx < numSamples; ++idx ){
-            series->append(magneticFieldSamples[idx].timestamp,magneticFieldSamples[idx].magnetic[1]);
+            series->append(magneticFieldSamples[idx].timestamp-zerosampletime,magneticFieldSamples[idx].magnetic[1]);
         }
         chart->addSeries(series);
 
         series = new QLineSeries();
         numSamples = magneticFieldSamples.count();
         for ( int idx = 0; idx < numSamples; ++idx ){
-            series->append(magneticFieldSamples[idx].timestamp,magneticFieldSamples[idx].magnetic[2]);
+            series->append(magneticFieldSamples[idx].timestamp-zerosampletime,magneticFieldSamples[idx].magnetic[2]);
         }
         chart->addSeries(series);
         chart->createDefaultAxes();
+        QList<QAbstractAxis*> axis = chart->axes(Qt::Horizontal);
+        axis[0]->setMin(0);
     }
 
     {
@@ -432,10 +487,12 @@ void MainWindow::parseFile() {
         QLineSeries * series = new QLineSeries();
         int numSamples = atmosphericPressureSamples.count();
         for ( int idx = 0; idx < numSamples; ++idx ){
-            series->append(atmosphericPressureSamples[idx].timestamp,atmosphericPressureSamples[idx].pressure);
+            series->append(atmosphericPressureSamples[idx].timestamp-zerosampletime,atmosphericPressureSamples[idx].pressure);
         }
         chart->addSeries(series);
         chart->createDefaultAxes();
+        QList<QAbstractAxis*> axis = chart->axes(Qt::Horizontal);
+        axis[0]->setMin(0);
     }
 
     {
@@ -450,10 +507,12 @@ void MainWindow::parseFile() {
         QLineSeries * series = new QLineSeries();
         int numSamples = relativeHumiditySamples.count();
         for ( int idx = 0; idx < numSamples; ++idx ){
-            series->append(relativeHumiditySamples[idx].timestamp,relativeHumiditySamples[idx].humidity);
+            series->append(relativeHumiditySamples[idx].timestamp-zerosampletime,relativeHumiditySamples[idx].humidity);
         }
         chart->addSeries(series);
         chart->createDefaultAxes();
+        QList<QAbstractAxis*> axis = chart->axes(Qt::Horizontal);
+        axis[0]->setMin(0);
     }
 
     {
@@ -468,10 +527,12 @@ void MainWindow::parseFile() {
         QLineSeries * series = new QLineSeries();
         int numSamples = buttonPressedSamples.count();
         for ( int idx = 0; idx < numSamples; ++idx ){
-            series->append(buttonPressedSamples[idx].timestamp, (int)(buttonPressedSamples[idx].value));
+            series->append(buttonPressedSamples[idx].timestamp-zerosampletime, (int)(buttonPressedSamples[idx].value));
         }
         chart->addSeries(series);
         chart->createDefaultAxes();
+        QList<QAbstractAxis*> axis = chart->axes(Qt::Horizontal);
+        axis[0]->setMin(0);
     }
 
     {
@@ -533,4 +594,18 @@ void MainWindow::socketDisconnected()
         clients.removeAll(pClient);
         pClient->deleteLater();
     }
+}
+
+int MainWindow::FindGPSSampleIndex( const float sampleTime ) {
+    const int numGpsSample = gpsSamples.length();
+    for ( int idx = 0; idx < numGpsSample; ++idx ) {
+        if ( idx < numGpsSample-1 ) {
+            if ( sampleTime >= gpsSamples[idx].timestamp && sampleTime < gpsSamples[idx+1].timestamp ) {
+                return idx;
+            }
+        } else {
+            return numGpsSample-1;
+        }
+    }
+    return -1;
 }

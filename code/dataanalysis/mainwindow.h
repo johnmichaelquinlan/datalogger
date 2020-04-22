@@ -105,6 +105,8 @@ public Q_SLOTS:
 
 private:
     void parseFile();
+    void calculateTimeline();
+    void createCharts();
 
     int Sample_ReadInt( char * buf, int & index ) {
         int temp = 0;
@@ -138,6 +140,8 @@ private:
         return sampleEnd == '\n';
     }
 
+    int FindGPSSampleIndex( const float sampleTime );
+
 private:
     QString fileName;
     QMediaPlayer * player;
@@ -155,5 +159,6 @@ private:
     QVector<TemperatureSample> temperatureSamples;
     QVector<GPSSample> gpsSamples;
     QVector<ButtonPressedSample> buttonPressedSamples;
+    float zerosampletime;
 };
 #endif // MAINWINDOW_H
