@@ -1,0 +1,123 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Release|Win32">
+      <Configuration>Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug|Win32">
+      <Configuration>Debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{C5F80730-F44F-4478-BDAE-6634EFC2CA88}</ProjectGuid>
+    <RootNamespace>
+    </RootNamespace>
+    <ProjectName>datalogger-1.7</ProjectName>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <CharacterSet>MultiByte</CharacterSet>
+    <PlatformToolset>
+    </PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>MultiByte</CharacterSet>
+    <PlatformToolset>
+    </PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <CharacterSet>MultiByte</CharacterSet>
+    <PlatformToolset>
+    </PlatformToolset>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>MultiByte</CharacterSet>
+    <PlatformToolset>
+    </PlatformToolset>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Label="Shared">
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup />
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <Optimization>MaxSpeed</Optimization>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <SDLCheck>true</SDLCheck>
+      <AdditionalIncludeDirectories>$(ProjectDir)..\datalogger-1.7;C:\Users\johnmichael.quinlan\AppData\Local\arduino15\packages\adafruit\hardware\nrf52\0.20.1\libraries\Wire;$(ProjectDir)..\..\..\..\..\..\johnmichael.quinlan\Documents\Arduino\libraries\Adafruit_LIS3MDL;$(ProjectDir)..\..\..\..\..\..\johnmichael.quinlan\Documents\Arduino\libraries\SparkFun_Ublox_Arduino_Library\src;$(ProjectDir)..\..\..\..\..\..\johnmichael.quinlan\Documents\Arduino\libraries\Adafruit_Arcada_Library;$(ProjectDir)..\..\..\..\..\..\johnmichael.quinlan\Documents\Arduino\libraries\Adafruit_Unified_Sensor;$(ProjectDir)..\..\..\..\..\..\johnmichael.quinlan\Documents\Arduino\libraries\Adafruit_LSM6DS;$(ProjectDir)..\..\..\..\..\..\johnmichael.quinlan\Documents\Arduino\libraries\Adafruit_SHT31_Library;$(ProjectDir)..\..\..\..\..\..\johnmichael.quinlan\Documents\Arduino\libraries\Adafruit_BMP280_Library;C:\Users\johnmichael.quinlan\AppData\Local\arduino15\packages\adafruit\hardware\nrf52\0.20.1\libraries\Bluefruit52Lib\src;C:\Users\johnmichael.quinlan\AppData\Local\arduino15\packages\adafruit\hardware\nrf52\0.20.1\libraries\Bluefruit52Lib\src\utility;C:\Users\johnmichael.quinlan\AppData\Local\arduino15\packages\adafruit\hardware\nrf52\0.20.1\cores\nRF5;C:\Users\johnmichael.quinlan\AppData\Local\arduino15\packages\adafruit\hardware\nrf52\0.20.1\cores\nRF5\avr;C:\Users\johnmichael.quinlan\AppData\Local\arduino15\packages\adafruit\hardware\nrf52\0.20.1\cores\nRF5\cmsis;C:\Users\johnmichael.quinlan\AppData\Local\arduino15\packages\adafruit\hardware\nrf52\0.20.1\cores\nRF5\freertos;C:\Users\johnmichael.quinlan\AppData\Local\arduino15\packages\adafruit\hardware\nrf52\0.20.1\cores\nRF5\linker;C:\Users\johnmichael.quinlan\AppData\Local\arduino15\packages\adafruit\hardware\nrf52\0.20.1\cores\nRF5\nordic;C:\Users\johnmichael.quinlan\AppData\Local\arduino15\packages\adafruit\hardware\nrf52\0.20.1\cores\nRF5\sysview;C:\Users\johnmichael.quinlan\AppData\Local\arduino15\packages\adafruit\hardware\nrf52\0.20.1\cores\nRF5\TinyUSB;C:\Users\johnmichael.quinlan\AppData\Local\arduino15\packages\adafruit\hardware\nrf52\0.20.1\cores\nRF5\utility;C:\Users\johnmichael.quinlan\AppData\Local\arduino15\packages\adafruit\hardware\nrf52\0.20.1\variants\clue_nrf52840;C:\Users\johnmichael.quinlan\AppData\Local\arduino15\packages\adafruit\hardware\nrf52\0.20.1\cores\nRF5\cmsis\include;C:\Users\johnmichael.quinlan\AppData\Local\arduino15\packages\adafruit\hardware\nrf52\0.20.1\cores\nRF5\nordic\nrfx;C:\Users\johnmichael.quinlan\AppData\Local\arduino15\packages\adafruit\hardware\nrf52\0.20.1\cores\nRF5\nordic\nrfx\hal;C:\Users\johnmichael.quinlan\AppData\Local\arduino15\packages\adafruit\hardware\nrf52\0.20.1\cores\nRF5\nordic\nrfx\mdk;C:\Users\johnmichael.quinlan\AppData\Local\arduino15\packages\adafruit\hardware\nrf52\0.20.1\cores\nRF5\nordic\nrfx\soc;C:\Users\johnmichael.quinlan\AppData\Local\arduino15\packages\adafruit\hardware\nrf52\0.20.1\cores\nRF5\nordic\nrfx\drivers\include;C:\Users\johnmichael.quinlan\AppData\Local\arduino15\packages\adafruit\hardware\nrf52\0.20.1\cores\nRF5\nordic\nrfx\drivers\src;C:\Users\johnmichael.quinlan\AppData\Local\arduino15\packages\adafruit\hardware\nrf52\0.20.1\cores\nRF5\nordic\softdevice\s140_nrf52_6.1.1_API\include;C:\Users\johnmichael.quinlan\AppData\Local\arduino15\packages\adafruit\hardware\nrf52\0.20.1\cores\nRF5\freertos\Source\include;C:\Users\johnmichael.quinlan\AppData\Local\arduino15\packages\adafruit\hardware\nrf52\0.20.1\cores\nRF5\freertos\config;C:\Users\johnmichael.quinlan\AppData\Local\arduino15\packages\adafruit\hardware\nrf52\0.20.1\cores\nRF5\freertos\portable\GCC\nrf52;C:\Users\johnmichael.quinlan\AppData\Local\arduino15\packages\adafruit\hardware\nrf52\0.20.1\cores\nRF5\freertos\portable\CMSIS\nrf52;C:\Users\johnmichael.quinlan\AppData\Local\arduino15\packages\adafruit\hardware\nrf52\0.20.1\cores\nRF5\sysview\SEGGER;C:\Users\johnmichael.quinlan\AppData\Local\arduino15\packages\adafruit\hardware\nrf52\0.20.1\cores\nRF5\sysview\Config;C:\Users\johnmichael.quinlan\AppData\Local\arduino15\packages\adafruit\hardware\nrf52\0.20.1\cores\nRF5\TinyUSB\Adafruit_TinyUSB_ArduinoCore;C:\Users\johnmichael.quinlan\AppData\Local\arduino15\packages\adafruit\hardware\nrf52\0.20.1\cores\nRF5\TinyUSB\Adafruit_TinyUSB_ArduinoCore\tinyusb\src;C:\Users\johnmichael.quinlan\AppData\Local\arduino15\packages\adafruit\tools\arm-none-eabi-gcc\7-2017q4\arm-none-eabi\include;C:\Users\johnmichael.quinlan\AppData\Local\arduino15\packages\adafruit\tools\arm-none-eabi-gcc\7-2017q4\lib\gcc\arm-none-eabi\4.8.3\include;C:\Users\johnmichael.quinlan\AppData\Local\arduino15\packages\adafruit\tools\arm-none-eabi-gcc\7-2017q4\arm-none-eabi\include\c++\4.8.3;C:\Users\johnmichael.quinlan\AppData\Local\arduino15\packages\adafruit\tools\arm-none-eabi-gcc\7-2017q4\arm-none-eabi\include\c++\5.2.1;C:\Users\johnmichael.quinlan\AppData\Local\arduino15\packages\adafruit\tools\arm-none-eabi-gcc\7-2017q4\arm-none-eabi\include\c++\4.8.3\arm-none-eabi;C:\Users\johnmichael.quinlan\AppData\Local\arduino15\packages\adafruit\tools\arm-none-eabi-gcc\7-2017q4\arm-none-eabi\include\c++\5.2.1\arm-none-eabi;C:\Users\johnmichael.quinlan\AppData\Local\arduino15\packages\adafruit\tools\arm-none-eabi-gcc\7-2017q4\arm-none-eabi\include\c++\4.8.3\bits;C:\Users\johnmichael.quinlan\AppData\Local\arduino15\packages\adafruit\tools\arm-none-eabi-gcc\7-2017q4\arm-none-eabi\include\c++\5.2.1\bits;C:\Users\johnmichael.quinlan\AppData\Local\arduino15\packages\adafruit\tools\arm-none-eabi-gcc\7-2017q4\arm-none-eabi\include;C:\Users\johnmichael.quinlan\AppData\Local\arduino15\packages\adafruit\tools\arm-none-eabi-gcc\7-2017q4\arm-none-eabi\include\sys;C:\Users\johnmichael.quinlan\AppData\Local\arduino15\packages\adafruit\tools\arm-none-eabi-gcc\7-2017q4\arm-none-eabi\include\newlib-nano;C:\Users\johnmichael.quinlan\AppData\Local\arduino15\packages\adafruit\tools\arm-none-eabi-gcc\7-2017q4\arm-none-eabi\include\machine;C:\Users\johnmichael.quinlan\AppData\Local\arduino15\packages\adafruit\tools\arm-none-eabi-gcc\7-2017q4\arm-none-eabi\include\sys;C:\Users\johnmichael.quinlan\AppData\Local\arduino15\packages\adafruit\hardware\nrf52\0.20.1\system;C:\Users\johnmichael.quinlan\AppData\Local\arduino15\packages\adafruit\hardware\nrf52\avr;C:\Users\johnmichael.quinlan\AppData\Local\arduino15\packages\adafruit\hardware\nrf52\usb;C:\Users\johnmichael.quinlan\AppData\Local\arduino15\packages\adafruit\tools\arm-none-eabi-gcc\7-2017q4\lib\gcc\arm-none-eabi\5.2.1\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <ForcedIncludeFiles>$(ProjectDir)__vm\.datalogger-1.7.vsarduino.h;%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <PreprocessorDefinitions>F_CPU=64000000;ARDUINO=108012;ARDUINO_NRF52840_CLUE;ARDUINO_ARCH_NRF52;NRF52840_XXAA;USBCON;USE_TINYUSB;USB_VID=0x239A;USB_PID=0x8071;SOFTDEVICE_PRESENT;ARDUINO_NRF52_ADAFRUIT;NRF52_SERIES;LFS_NAME_MAX=64;CFG_DEBUG=0;CFG_LOGGER=1;CFG_SYSVIEW=0;__cplusplus=201103L;_VMICRO_INTELLISENSE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <Link>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <Optimization>Disabled</Optimization>
+      <SDLCheck>true</SDLCheck>
+      <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <ForcedIncludeFiles>%(ForcedIncludeFiles)</ForcedIncludeFiles>
+      <IgnoreStandardIncludePath>true</IgnoreStandardIncludePath>
+      <PreprocessorDefinitions>%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <Link>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ProjectCapability Include="VisualMicro" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="datalogger-1.7.ino">
+      <FileType>CppCode</FileType>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="PacketIdInfo.h">
+      <FileType>CppCode</FileType>
+    </ClInclude>
+    <ClInclude Include="__vm\.datalogger-1.7.vsarduino.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="PacketIdInfo.cpp" />
+  </ItemGroup>
+  <PropertyGroup>
+    <DebuggerFlavor>VisualMicroDebugger</DebuggerFlavor>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>
