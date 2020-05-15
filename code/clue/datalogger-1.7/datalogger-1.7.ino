@@ -10,13 +10,15 @@
 #include <bluefruit.h>
 #include "PacketIdInfo.h"
 
+//#define DEBUG 0
 
 BLEService mainService = BLEService(0x00000001000000fd8933990d6f411ff8);
 
 //SENSORS
 
-uint32_t pulses = 0;
+volatile uint32_t pulses = 0;
 uint32_t rpmPrevMillis = 0;
+uint32_t rpmcalc = 0;
 const byte rpmpulsePin = 9;
 const byte throttlePositionPin = 10;
 const byte brakePositionPin = 4;
@@ -183,30 +185,23 @@ void sensorNotifyLatestPacket(const uint32_t id) {
     //lis3mdl.getEvent(&mag);
     uint32_t ms = millis();
     unsigned long delta = ms - rpmPrevMillis;
-    rpmPrevMillis = ms;
-    
+    if (pulses > 1) {
+        rpmPrevMillis = ms;
+        // 0.5 is due to 4 stroke per rev with 2 ignitions per rev so 2 pulses per revolution so / 2 or * 0.5
+        // 30000 = ( ( 1000ms / delta ) * pulses ) * 60 / 2 = ((1000 * 60 * 0.5) / delta) * pulses
+        rpmcalc = ((30000.0f / (float)delta) * (float)pulses);
+        pulses = 0;
+    }
+
+
     diyRCMSG motoMessage;
     motoMessage.id = id;
     int humi = (int)sht30.readHumidity();
     int temp = (int)(bmp280.readTemperature() * 5.0f);
     int pres = (int)(bmp280.readPressure() * 0.01f);
-    float countpermin = ((((1000.0f / (float)delta) * pulses) * 60.0f) * 0.5f);
-    int rpm = max(0, (countpermin * 0.01f));
+    int rpm = max(0, (rpmcalc * 0.01f));
     int throttlePos = (int)((analogRead(throttlePositionPin) / 1024.0f) * 100.0f);
     int brakePos = (int)((analogRead(brakePositionPin) / 1024.0f) * 100.0f);
-#if 0
-    arcada.display->setTextColor(ARCADA_GREEN, ARCADA_BLACK);
-    arcada.display->setCursor(0, 100);
-    arcada.display->print("RPM: ");
-    arcada.display->print(countpermin);
-    arcada.display->println("               ");
-    arcada.display->print("Throttle: ");
-    arcada.display->print(throttlePos);
-    arcada.display->println("               ");
-    arcada.display->print("Brake: ");
-    arcada.display->print(brakePos);
-    arcada.display->println("               ");
-#endif
 
     motoMessage.data |= ((uint64_t)(humi)) & 0x000000000000FF;
     motoMessage.data |= ((uint64_t)(temp) << 8) & 0x0000000000FF00;
@@ -230,11 +225,6 @@ void sensorLoop() {
 }
 
 void gpsLoop() {
-
-    //uint32_t ms = millis();
-    //uint32_t delta = ms - prevGpsMillis;
-    //prevGpsMillis = ms;
-        
     uint16_t year = gps.getYear();
     uint8_t month = gps.getMonth();
     uint8_t day = gps.getDay();
@@ -296,7 +286,7 @@ void gpsLoop() {
 }
 
 void setup() {
-#if 0
+#if DEBUG
     Serial.begin(115200);
     while (!Serial) {
         delay(10);
