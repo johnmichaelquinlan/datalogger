@@ -18,7 +18,7 @@ BLEService mainService = BLEService(0x00000001000000fd8933990d6f411ff8);
 
 volatile uint32_t pulses = 0;
 uint32_t rpmPrevMillis = 0;
-uint32_t rpmcalc = 0;
+float rpmcalc = 0.0f;
 const byte rpmpulsePin = 9;
 const byte throttlePositionPin = 10;
 const byte brakePositionPin = 4;
@@ -196,20 +196,47 @@ void sensorNotifyLatestPacket(const uint32_t id) {
 
     diyRCMSG motoMessage;
     motoMessage.id = id;
-    int humi = (int)sht30.readHumidity();
-    int temp = (int)(bmp280.readTemperature() * 5.0f);
-    int pres = (int)(bmp280.readPressure() * 0.01f);
-    int rpm = max(0, (rpmcalc * 0.01f));
-    int throttlePos = (int)((analogRead(throttlePositionPin) / 1024.0f) * 100.0f);
-    int brakePos = (int)((analogRead(brakePositionPin) / 1024.0f) * 100.0f);
+    motoMessage.data = 0;
 
-    motoMessage.data |= ((uint64_t)(humi)) & 0x000000000000FF;
-    motoMessage.data |= ((uint64_t)(temp) << 8) & 0x0000000000FF00;
-    motoMessage.data |= ((uint64_t)((pres >> 8) & 0xFF) << 16) & 0x00000000FF0000;
+    int humi = sht30.readHumidity();
+    int temp = bmp280.readTemperature();
+    int pres = bmp280.readPressure() * 0.01f;
+    int rpm = map(rpmcalc, 0, 25500, 0, 255);
+
+    int throttlePos = analogRead(throttlePositionPin);
+    throttlePos = map(throttlePos, 70, 720, 0, 100); // map to calibration 
+    throttlePos = constrain(throttlePos, 0, 100); // constrain to percentage range
+
+    int brakePos = analogRead(brakePositionPin);
+    brakePos = map(brakePos, 100, 560, 0, 100); // map to calibration
+    brakePos = constrain(brakePos, 0, 100); // constrain to percentage range
+
+
+ #if 0
+
+    arcada.display->setTextColor(ARCADA_GREEN, ARCADA_BLACK);
+    arcada.display->setCursor(0, 100);
+    arcada.display->print("RPM: ");
+    arcada.display->print(rpm);
+    arcada.display->println("               ");
+
+    arcada.display->print("Throttle: ");
+    arcada.display->print(throttlePos);
+    arcada.display->println("               ");
+    
+    arcada.display->print("Brake: ");
+    arcada.display->print(brakePos);
+    arcada.display->println("               ");
+#endif
+
+
+    motoMessage.data |= ((uint64_t)(humi & 0xFF)) & 0x000000000000FF;
+    motoMessage.data |= ((uint64_t)(temp & 0xFF) << 8) & 0x0000000000FF00;
+    motoMessage.data |= ((uint64_t)(((pres & 0xFF00) >> 8) & 0xFF) << 16) & 0x00000000FF0000;
     motoMessage.data |= ((uint64_t)(pres & 0xFF) << 24) & 0x000000FF000000;
-    motoMessage.data |= ((uint64_t)(rpm) << 32) & 0x0000FF00000000;
-    motoMessage.data |= ((uint64_t)(throttlePos) << 40) & 0x00FF0000000000;
-    motoMessage.data |= ((uint64_t)(brakePos) << 48) & 0xFF000000000000;
+    motoMessage.data |= ((uint64_t)(rpm & 0xFF) << 32) & 0x0000FF00000000;
+    motoMessage.data |= ((uint64_t)(throttlePos & 0xFF) << 40) & 0x00FF0000000000;
+    motoMessage.data |= ((uint64_t)(brakePos & 0xFF) << 48) & 0xFF000000000000;
 
     // Notify
     raceChronoSensorDataMainCharacteristic.notify((uint8_t*)&motoMessage, sizeof(motoMessage));
