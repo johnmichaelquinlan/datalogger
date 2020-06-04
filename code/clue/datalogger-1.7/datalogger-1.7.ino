@@ -37,6 +37,7 @@ typedef struct
 {
     uint32_t id;
     uint64_t data;
+    uint64_t data2;
 } diyRCMSG;
 
 Adafruit_Arcada arcada;
@@ -180,9 +181,6 @@ void gpsSetup() {
 
 // sensor send to rachchrono time sliced
 void sensorNotifyLatestPacket(const uint32_t id) {
-    //sensors_event_t accel, gyro, mag;
-    //lsm6ds33.getEvent(&accel, &gyro, 0);
-    //lis3mdl.getEvent(&mag);
     uint32_t ms = millis();
     unsigned long delta = ms - rpmPrevMillis;
     if (pulses > 1) {
@@ -197,46 +195,74 @@ void sensorNotifyLatestPacket(const uint32_t id) {
     diyRCMSG motoMessage;
     motoMessage.id = id;
     motoMessage.data = 0;
+    motoMessage.data2 = 0;
 
+    //humidity
     int humi = sht30.readHumidity();
-    int temp = bmp280.readTemperature();
-    int pres = bmp280.readPressure() * 0.01f;
-    int rpm = map(rpmcalc, 0, 25500, 0, 255);
-
-    int throttlePos = analogRead(throttlePositionPin);
-    throttlePos = map(throttlePos, 70, 720, 0, 100); // map to calibration 
-    throttlePos = constrain(throttlePos, 0, 100); // constrain to percentage range
-
-    int brakePos = analogRead(brakePositionPin);
-    brakePos = map(brakePos, 100, 560, 0, 100); // map to calibration
-    brakePos = constrain(brakePos, 0, 100); // constrain to percentage range
-
-
- #if 0
-
-    arcada.display->setTextColor(ARCADA_GREEN, ARCADA_BLACK);
-    arcada.display->setCursor(0, 100);
-    arcada.display->print("RPM: ");
-    arcada.display->print(rpm);
-    arcada.display->println("               ");
-
-    arcada.display->print("Throttle: ");
-    arcada.display->print(throttlePos);
-    arcada.display->println("               ");
+    humi = map(humi, 0, 100, 0, 10); // map to calibration 
+    humi = constrain(humi, 0, 10); // constrain to percentage range
     
-    arcada.display->print("Brake: ");
-    arcada.display->print(brakePos);
-    arcada.display->println("               ");
-#endif
+    //temp
+    int temp = bmp280.readTemperature();
+   
+    //brakepos
+    int brakePos = analogRead(brakePositionPin);
+    brakePos = map(brakePos, 100, 560, 0, 63); // map to calibration
+    brakePos = constrain(brakePos, 0, 63); // constrain to percentage range
+    
+    //throttle
+    int throttlePos = analogRead(throttlePositionPin);
+    throttlePos = map(throttlePos, 70, 720, 0, 255); // map to calibration 
+    throttlePos = constrain(throttlePos, 0, 255); // constrain to percentage range
+    
+    //rem
+    int rpm = map(rpmcalc, 0, 16000, 0, 255);
+    rpm = constrain(rpm, 0, 255); // constrain to percentage range
 
+    //airpressure
+    int pres = bmp280.readPressure() * 0.1f;
+    
+    sensors_event_t accel, gyro, mag;
+    lsm6ds33.getEvent(&accel, &gyro, 0);
+    lis3mdl.getEvent(&mag);
 
-    motoMessage.data |= ((uint64_t)(humi & 0xFF)) & 0x000000000000FF;
-    motoMessage.data |= ((uint64_t)(temp & 0xFF) << 8) & 0x0000000000FF00;
-    motoMessage.data |= ((uint64_t)(((pres & 0xFF00) >> 8) & 0xFF) << 16) & 0x00000000FF0000;
-    motoMessage.data |= ((uint64_t)(pres & 0xFF) << 24) & 0x000000FF000000;
-    motoMessage.data |= ((uint64_t)(rpm & 0xFF) << 32) & 0x0000FF00000000;
-    motoMessage.data |= ((uint64_t)(throttlePos & 0xFF) << 40) & 0x00FF0000000000;
-    motoMessage.data |= ((uint64_t)(brakePos & 0xFF) << 48) & 0xFF000000000000;
+    int accelx = map(accel.acceleration.x, -16, +16, -127, +127);
+    int accely = map(accel.acceleration.y, -16, +16, -127, +127);
+    int accelz = map(accel.acceleration.z, -16, +16, -127, +127);
+    accelx = constrain(accelx, -127, +127);
+    accely = constrain(accely, -127, +127);
+    accelz = constrain(accelz, -127, +127);
+
+    int gyrox = map(gyro.gyro.x, -6, +6, -127, +127);
+    int gyroy = map(gyro.gyro.y, -6, +6, -127, +127);
+    int gyroz = map(gyro.gyro.z, -6, +6, -127, +127);
+    gyrox = constrain(gyrox, -127, +127);
+    gyroy = constrain(gyroy, -127, +127);
+    gyroz = constrain(gyroz, -127, +127);
+
+    int magx = map(mag.magnetic.x, -400, +400, -127, +127);
+    int magy = map(mag.magnetic.y, -400, +400, -127, +127);
+    int magz = map(mag.magnetic.z, -400, +400, -127, +127);
+    magx = constrain(magx, -127, +127);
+    magy = constrain(magy, -127, +127);
+    magz = constrain(magz, -127, +127);
+
+    motoMessage.data |= ((uint64_t)(humi        & 0x0F))        & 0x000000000000000F;
+    motoMessage.data |= ((uint64_t)(temp        & 0x3F) << 4)   & 0x0000000000000FF0;
+    motoMessage.data |= ((uint64_t)(brakePos    & 0x3F) << 10)  & 0x000000000000FF00;
+    motoMessage.data |= ((uint64_t)(throttlePos & 0xFF) << 16)  & 0x0000000000FF0000;
+    motoMessage.data |= ((uint64_t)(rpm         & 0xFF) << 24)  & 0x00000000FF000000;
+    motoMessage.data |= ((uint64_t)(pres        & 0xFF) << 32)  & 0x000000FF00000000;
+    motoMessage.data |= ((uint64_t)(accelx      & 0xFF) << 40)  & 0x0000FF0000000000;
+    motoMessage.data |= ((uint64_t)(accely      & 0xFF) << 48)  & 0x00FF000000000000;
+    motoMessage.data |= ((uint64_t)(accelz      & 0xFF) << 56)  & 0xFF00000000000000;
+    motoMessage.data2 |= ((uint64_t)(gyrox      & 0xFF))        & 0x00000000000000FF;
+    motoMessage.data2 |= ((uint64_t)(gyroy      & 0xFF) << 8)   & 0x000000000000FF00;
+    motoMessage.data2 |= ((uint64_t)(gyroz      & 0xFF) << 16)  & 0x0000000000FF0000;
+    motoMessage.data2 |= ((uint64_t)(magx       & 0xFF) << 24)  & 0x00000000FF000000;
+    motoMessage.data2 |= ((uint64_t)(magy       & 0xFF) << 32)  & 0x000000FF00000000;
+    motoMessage.data2 |= ((uint64_t)(magz       & 0xFF) << 40)  & 0x0000FF0000000000;
+    
 
     // Notify
     raceChronoSensorDataMainCharacteristic.notify((uint8_t*)&motoMessage, sizeof(motoMessage));
