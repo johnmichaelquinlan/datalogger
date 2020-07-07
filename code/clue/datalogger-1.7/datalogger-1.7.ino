@@ -33,12 +33,15 @@ PacketIdInfo raceChronoPacketIdInfo;
 bool raceChronoAllowUnknownPackets = false;
 
 
+#pragma pack(push)
+#pragma pack(4)
 typedef struct
 {
     uint32_t id;
     uint64_t data;
     uint64_t data2;
 } diyRCMSG;
+#pragma pack(pop)
 
 Adafruit_Arcada arcada;
 Adafruit_LSM6DS33 lsm6ds33; // accel gyro temp
@@ -199,22 +202,20 @@ void sensorNotifyLatestPacket(const uint32_t id) {
 
     //humidity
     int humi = sht30.readHumidity();
-    humi = map(humi, 0, 100, 0, 10); // map to calibration 
-    humi = constrain(humi, 0, 10); // constrain to percentage range
     
     //temp
     int temp = bmp280.readTemperature();
    
     //brakepos
     int brakePos = analogRead(brakePositionPin);
-    brakePos = map(brakePos, 100, 560, 0, 63); // map to calibration
-    brakePos = constrain(brakePos, 0, 63); // constrain to percentage range
-    
+    brakePos = map(brakePos, 100, 560, 0, 255); // map to calibration
+    brakePos = constrain(brakePos, 0, 255); // constrain to percentage range
+
     //throttle
     int throttlePos = analogRead(throttlePositionPin);
     throttlePos = map(throttlePos, 70, 720, 0, 255); // map to calibration 
     throttlePos = constrain(throttlePos, 0, 255); // constrain to percentage range
-    
+
     //rem
     int rpm = map(rpmcalc, 0, 16000, 0, 255);
     rpm = constrain(rpm, 0, 255); // constrain to percentage range
@@ -247,21 +248,21 @@ void sensorNotifyLatestPacket(const uint32_t id) {
     magy = constrain(magy, -127, +127);
     magz = constrain(magz, -127, +127);
 
-    motoMessage.data |= ((uint64_t)(humi        & 0x0F))        & 0x000000000000000F;
-    motoMessage.data |= ((uint64_t)(temp        & 0x3F) << 4)   & 0x0000000000000FF0;
-    motoMessage.data |= ((uint64_t)(brakePos    & 0x3F) << 10)  & 0x000000000000FF00;
-    motoMessage.data |= ((uint64_t)(throttlePos & 0xFF) << 16)  & 0x0000000000FF0000;
-    motoMessage.data |= ((uint64_t)(rpm         & 0xFF) << 24)  & 0x00000000FF000000;
-    motoMessage.data |= ((uint64_t)(pres        & 0xFF) << 32)  & 0x000000FF00000000;
-    motoMessage.data |= ((uint64_t)(accelx      & 0xFF) << 40)  & 0x0000FF0000000000;
-    motoMessage.data |= ((uint64_t)(accely      & 0xFF) << 48)  & 0x00FF000000000000;
-    motoMessage.data |= ((uint64_t)(accelz      & 0xFF) << 56)  & 0xFF00000000000000;
-    motoMessage.data2 |= ((uint64_t)(gyrox      & 0xFF))        & 0x00000000000000FF;
-    motoMessage.data2 |= ((uint64_t)(gyroy      & 0xFF) << 8)   & 0x000000000000FF00;
-    motoMessage.data2 |= ((uint64_t)(gyroz      & 0xFF) << 16)  & 0x0000000000FF0000;
-    motoMessage.data2 |= ((uint64_t)(magx       & 0xFF) << 24)  & 0x00000000FF000000;
-    motoMessage.data2 |= ((uint64_t)(magy       & 0xFF) << 32)  & 0x000000FF00000000;
-    motoMessage.data2 |= ((uint64_t)(magz       & 0xFF) << 40)  & 0x0000FF0000000000;
+    motoMessage.data |= ((uint64_t)(humi        & 0xFF))        & 0x00000000000000FF;
+    motoMessage.data |= ((uint64_t)(temp        & 0xFF) << 8)   & 0x000000000000FF00;
+    motoMessage.data |= ((uint64_t)(brakePos    & 0xFF) << 16)  & 0x0000000000FF0000;
+    motoMessage.data |= ((uint64_t)(throttlePos & 0xFF) << 24)  & 0x00000000FF000000;
+    motoMessage.data |= ((uint64_t)(rpm         & 0xFF) << 32)  & 0x000000FF00000000;
+    motoMessage.data |= ((uint64_t)(pres        & 0xFF) << 40)  & 0x0000FF0000000000;
+    motoMessage.data |= ((uint64_t)(accelx      & 0xFF) << 48)  & 0x00FF000000000000;
+    motoMessage.data |= ((uint64_t)(accely      & 0xFF) << 56)  & 0xFF00000000000000;
+    motoMessage.data2 |= ((uint64_t)(accelz     & 0xFF))        & 0x00000000000000FF;
+    motoMessage.data2 |= ((uint64_t)(gyrox      & 0xFF) << 8)   & 0x000000000000FF00;
+    motoMessage.data2 |= ((uint64_t)(gyroy      & 0xFF) << 16)  & 0x0000000000FF0000;
+    motoMessage.data2 |= ((uint64_t)(gyroz      & 0xFF) << 24)  & 0x00000000FF000000;
+    motoMessage.data2 |= ((uint64_t)(magx       & 0xFF) << 32)  & 0x000000FF00000000;
+    motoMessage.data2 |= ((uint64_t)(magy       & 0xFF) << 40)  & 0x0000FF0000000000;
+    motoMessage.data2 |= ((uint64_t)(magz       & 0xFF) << 48)  & 0x00FF000000000000;
     
 
     // Notify
